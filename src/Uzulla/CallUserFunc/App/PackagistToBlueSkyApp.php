@@ -17,7 +17,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 /**
  * Packagist.orgの新着パッケージをBlueSkyに投稿するアプリケーションクラス
  */
-class PackagistToBlueSkyApp extends Command
+class PackagistToBlueSkyApp
 {
     private PackagistRSSReader $rssReader;
     private BlueSkyClient $blueSkyClient;
@@ -39,8 +39,6 @@ class PackagistToBlueSkyApp extends Command
         GitHubClient $githubClient,
         ?LoggerInterface $logger = null
     ) {
-        parent::__construct('app:post-packages');
-        
         $this->rssReader = $rssReader;
         $this->blueSkyClient = $blueSkyClient;
         $this->formatter = $formatter;
@@ -49,46 +47,16 @@ class PackagistToBlueSkyApp extends Command
     }
     
     /**
-     * コマンドの設定
-     */
-    protected function configure(): void
-    {
-        $this
-            ->setDescription('Packagist.orgの新着パッケージをBlueSkyに投稿します')
-            ->setHelp('このコマンドはPackagist.orgのRSSフィードから新着パッケージを取得し、BlueSkyに投稿します')
-            ->addOption(
-                'limit',
-                'l',
-                InputOption::VALUE_OPTIONAL,
-                '投稿する最大パッケージ数',
-                50
-            )
-            ->addOption(
-                'dry-run',
-                'd',
-                InputOption::VALUE_NONE,
-                '実際に投稿せずに処理内容を表示するのみ'
-            );
-    }
-    
-    /**
      * アプリケーションの実行
      *
-     * @param InputInterface $input 入力
+     * @param int|string|null $limit 投稿する最大パッケージ数
+     * @param bool $dryRun ドライランかどうか
      * @param OutputInterface $output 出力
      * @return int 終了コード
      */
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    public function run($limit, bool $dryRun, OutputInterface $output): int
     {
-        $output->writeln('<info>Packagist.orgの新着パッケージをBlueSkyに投稿します</info>');
-        
-        $limitOption = $input->getOption('limit');
-        $limit = is_numeric($limitOption) ? (int) $limitOption : 5;
-        $dryRun = (bool) $input->getOption('dry-run');
-        
-        if ($dryRun) {
-            $output->writeln('<comment>ドライラン: 実際の投稿は行いません</comment>');
-        }
+        $limitValue = is_numeric($limit) ? (int) $limit : 50;
         
         try {
             // BlueSkyに認証
@@ -114,9 +82,9 @@ class PackagistToBlueSkyApp extends Command
             }
             
             // 投稿数を制限
-            if (count($packages) > $limit) {
-                $packages = array_slice($packages, 0, $limit);
-                $output->writeln(sprintf('<info>投稿数を%d件に制限します</info>', $limit));
+            if (count($packages) > $limitValue) {
+                $packages = array_slice($packages, 0, $limitValue);
+                $output->writeln(sprintf('<info>投稿数を%d件に制限します</info>', $limitValue));
             }
             
             // パッケージを公開日時の昇順（古い順）でソート

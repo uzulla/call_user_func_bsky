@@ -199,9 +199,13 @@ class PackagistRSSReader
             return $package;
         }
         
-        // リポジトリURLを追加
+        // リポジトリURLを追加（Packagist APIから直接取得）
         if (isset($details['repository']) && is_string($details['repository'])) {
             $package['repository_url'] = $details['repository'];
+            $this->logger?->info('Added repository URL from Packagist API', [
+                'package' => $packageName,
+                'repository_url' => $details['repository']
+            ]);
         }
         
         return $package;

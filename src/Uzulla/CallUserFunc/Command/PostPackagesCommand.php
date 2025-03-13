@@ -57,6 +57,20 @@ class PostPackagesCommand extends Command
     {
         $app = AppFactory::create();
         
-        return $app->run($input, $output);
+        $limit = $input->getOption('limit');
+        $dryRun = $input->getOption('dry-run');
+        
+        $output->writeln('<info>Packagist.orgの新着パッケージをBlueSkyに投稿します</info>');
+        
+        if ($dryRun) {
+            $output->writeln('<comment>ドライラン: 実際の投稿は行いません</comment>');
+        }
+        
+        try {
+            return $app->run($limit, $dryRun, $output);
+        } catch (\Exception $e) {
+            $output->writeln(sprintf('<error>エラー: %s</error>', $e->getMessage()));
+            return Command::FAILURE;
+        }
     }
 }
