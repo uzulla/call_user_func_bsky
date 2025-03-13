@@ -81,8 +81,8 @@ class PackagistRSSReader
                 ];
             }
 
-            // 公開日時の新しい順にソート
-            usort($packages, fn($a, $b) => $b['timestamp'] <=> $a['timestamp']);
+            // 公開日時の古い順にソート（昇順）
+            usort($packages, fn($a, $b) => $a['timestamp'] <=> $b['timestamp']);
             
             $this->logger?->info('Successfully parsed RSS feed', ['count' => count($packages)]);
             

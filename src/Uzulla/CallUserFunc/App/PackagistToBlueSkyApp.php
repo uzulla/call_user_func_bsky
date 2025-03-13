@@ -111,6 +111,10 @@ class PackagistToBlueSkyApp extends Command
                 $output->writeln(sprintf('<info>投稿数を%d件に制限します</info>', $limit));
             }
             
+            // パッケージを公開日時の昇順（古い順）でソート
+            usort($packages, fn($a, $b) => $a['timestamp'] <=> $b['timestamp']);
+            $output->writeln('<info>パッケージを公開日時の昇順（古い順）でソートしました</info>');
+            
             if (empty($packages)) {
                 $output->writeln('<comment>新着パッケージはありません</comment>');
                 return Command::SUCCESS;
