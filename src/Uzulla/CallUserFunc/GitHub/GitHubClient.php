@@ -93,6 +93,7 @@ class GitHubClient
         
         // ユーザーが存在しない場合は新しいとみなす
         if ($userInfo === null) {
+            $this->logger?->info('GitHub user does not exist, considering as new', ['username' => $username]);
             return true;
         }
         
@@ -116,6 +117,7 @@ class GitHubClient
             $this->logger?->info('Checked if GitHub user is new', [
                 'username' => $username,
                 'created_at' => $createdAt->format('Y-m-d H:i:s'),
+                'one_week_ago' => $oneWeekAgo->format('Y-m-d H:i:s'),
                 'is_new' => $isNew,
             ]);
             
@@ -127,6 +129,32 @@ class GitHubClient
                 'error' => $e->getMessage(),
             ]);
             return true; // エラーの場合は新しいとみなす
+        }
+    }
+    
+    /**
+     * GitHubユーザーの登録日時を取得する
+     *
+     * @param string $username GitHubユーザー名
+     * @return \DateTime|null ユーザーの登録日時、取得できない場合はnull
+     */
+    public function getUserCreatedAt(string $username): ?\DateTime
+    {
+        $userInfo = $this->getUserInfo($username);
+        
+        if ($userInfo === null || !isset($userInfo['created_at']) || !is_string($userInfo['created_at'])) {
+            return null;
+        }
+        
+        try {
+            return new \DateTime($userInfo['created_at']);
+        } catch (\Exception $e) {
+            $this->logger?->error('Failed to parse GitHub user created_at', [
+                'username' => $username,
+                'created_at' => $userInfo['created_at'],
+                'error' => $e->getMessage(),
+            ]);
+            return null;
         }
     }
     

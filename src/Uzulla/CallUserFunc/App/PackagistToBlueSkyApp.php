@@ -213,16 +213,42 @@ class PackagistToBlueSkyApp
                 continue;
             }
             
-            // ユーザーが存在しないか、新しい場合はスキップ
-            if (!$this->githubClient->userExists($username) || $this->githubClient->isNewUser($username)) {
-                $this->logger?->info('Skipping package from new or non-existent GitHub user', [
+            // ユーザーが存在するか確認
+            $userExists = $this->githubClient->userExists($username);
+            if (!$userExists) {
+                $this->logger?->info('Skipping package from non-existent GitHub user', [
                     'package' => $package['title'] ?? 'unknown',
                     'username' => $username,
                 ]);
                 $output->writeln(sprintf(
-                    '<comment>スパムの可能性があるためスキップします: %s (GitHubユーザー: %s)</comment>',
+                    '<comment>スパムの可能性があるためスキップします: %s (GitHubユーザー: %s) - ユーザーが存在しません</comment>',
                     $package['title'] ?? 'unknown',
                     (string)$username
+                ));
+                $skippedCount++;
+                continue;
+            }
+            
+            // ユーザーが新しいか確認
+            $isNewUser = $this->githubClient->isNewUser($username);
+            if ($isNewUser) {
+                // ユーザーの登録日時を取得
+                $createdAt = $this->githubClient->getUserCreatedAt($username);
+                $createdAtStr = $createdAt ? $createdAt->format('Y-m-d H:i:s') : '不明';
+                $oneWeekAgo = new \DateTime('-1 week');
+                
+                $this->logger?->info('Skipping package from new GitHub user', [
+                    'package' => $package['title'] ?? 'unknown',
+                    'username' => $username,
+                    'created_at' => $createdAtStr,
+                    'one_week_ago' => $oneWeekAgo->format('Y-m-d H:i:s'),
+                ]);
+                
+                $output->writeln(sprintf(
+                    '<comment>スパムの可能性があるためスキップします: %s (GitHubユーザー: %s) - ユーザー登録日: %s (1週間以内)</comment>',
+                    $package['title'] ?? 'unknown',
+                    (string)$username,
+                    $createdAtStr
                 ));
                 $skippedCount++;
                 continue;
