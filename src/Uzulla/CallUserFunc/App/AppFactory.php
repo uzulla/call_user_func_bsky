@@ -34,8 +34,17 @@ class AppFactory
         
         $blueSkyClient = new BlueSkyClient($logger);
 
-        $githubToken = (string)$_ENV['GITHUB_TOKEN'] ?? null;
-        $githubClient = new GitHubClient($githubToken, $logger);
+        $githubToken = $_ENV['GITHUB_TOKEN'] ?? null;
+        // GitHub Actionsの環境変数を優先的に使用
+        $repoOwner = $_ENV['GITHUB_REPOSITORY_OWNER'] ?? null;
+        $repoName = $_ENV['GITHUB_REPOSITORY_NAME'] ?? null;
+        
+        $githubClient = new GitHubClient(
+            $githubToken,
+            $repoOwner,
+            $repoName,
+            $logger
+        );
         
         $formatter = new PackagistFormatter(
             100,

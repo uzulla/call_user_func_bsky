@@ -49,34 +49,36 @@ class PackagistToBlueSkyApp
     /**
      * アプリケーションの実行
      *
-     * @param int|string|null $limit 投稿する最大パッケージ数
+     * @param int $limit 投稿する最大パッケージ数
      * @param bool $dryRun ドライランかどうか
      * @param OutputInterface $output 出力
      * @return int 終了コード
      */
-    public function run($limit, bool $dryRun, OutputInterface $output): int
+    public function run(int $limit, bool $dryRun, OutputInterface $output): int
     {
-        $limitValue = is_numeric($limit) ? (int) $limit : 50;
+        $limitValue = $limit;
         
         try {
             // BlueSkyに認証
             $this->authenticateBlueSky($output);
             
-            // 最新の投稿日時を取得
-            $lastPostDate = $this->getLastPostDate($output);
-            
+            // GitHub Actions Variableから最後のパッケージ公開日時を取得
+            $lastPackagePubDate = $this->getLastPackagePubDate($output);
+            if ($lastPackagePubDate !== null) {
+                $this->logger?->info("lastPackagePubDate: {$lastPackagePubDate->format('Y-m-d H:i:s')}");
+            }
             // Packagistから新着パッケージを取得
             $packages = $this->fetchPackages($output);
             
             // スパムの可能性があるパッケージをフィルタリング
             $packages = $this->filterSpamPackages($packages, $output);
             
-            // 最新の投稿以降のパッケージをフィルタリング
-            if ($lastPostDate !== null) {
-                $packages = $this->rssReader->filterPackagesSince($packages, $lastPostDate);
+            // 最後に処理したパッケージ以降のパッケージをフィルタリング
+            if ($lastPackagePubDate !== null) {
+                $packages = $this->rssReader->filterPackagesSince($packages, $lastPackagePubDate);
                 $output->writeln(sprintf(
                     '<info>%s以降の新着パッケージ: %d件</info>',
-                    $lastPostDate->format('Y-m-d H:i:s'),
+                    $lastPackagePubDate->format('Y-m-d H:i:s'),
                     count($packages)
                 ));
             }
@@ -131,27 +133,32 @@ class PackagistToBlueSkyApp
     }
     
     /**
-     * 最新の投稿日時を取得する
+     * GitHub Actions Variableから最後のパッケージ公開日時を取得する
      *
      * @param OutputInterface $output 出力
-     * @return \DateTime|null 最新の投稿日時、投稿がない場合はnull
+     * @return \DateTime|null 最後のパッケージ公開日時、取得できない場合はnull
      */
-    private function getLastPostDate(OutputInterface $output): ?\DateTime
+    private function getLastPackagePubDate(OutputInterface $output): ?\DateTime
     {
-        $output->writeln('<info>BlueSkyの最新投稿日時を取得します</info>');
+        $output->writeln('<info>GitHub Actions Variableから最後のパッケージ公開日時を取得します</info>');
         
-        $lastPostDate = $this->blueSkyClient->getLatestPostDate();
-        
-        if ($lastPostDate !== null) {
-            $output->writeln(sprintf(
-                '<info>最新投稿日時: %s</info>',
-                $lastPostDate->format('Y-m-d H:i:s')
-            ));
-        } else {
-            $output->writeln('<comment>投稿がありません</comment>');
+        try {
+            $lastPackagePubDate = $this->githubClient->getLastPackagePubDate();
+            
+            if ($lastPackagePubDate !== null) {
+                $output->writeln(sprintf(
+                    '<info>最後のパッケージ公開日時: %s</info>',
+                    $lastPackagePubDate->format('Y-m-d H:i:s')
+                ));
+            } else {
+                $output->writeln('<comment>最後のパッケージ公開日時が見つかりません</comment>');
+            }
+            
+            return $lastPackagePubDate;
+        } catch (\RuntimeException $e) {
+            $output->writeln(sprintf('<comment>GitHub Actions Variableの取得に失敗しました: %s</comment>', $e->getMessage()));
+            return null;
         }
-        
-        return $lastPostDate;
     }
     
     /**
@@ -308,6 +315,11 @@ class PackagistToBlueSkyApp
      */
     private function postPackages(array $packages, OutputInterface $output, bool $dryRun): void
     {
+        if (empty($packages)) {
+            $output->writeln('<comment>投稿するパッケージがありません</comment>');
+            return;
+        }
+        
         $output->writeln(sprintf('<info>%d件のパッケージを投稿します</info>', count($packages)));
         
         $formattedPackages = $this->formatter->formatPackages($packages);
@@ -315,6 +327,17 @@ class PackagistToBlueSkyApp
             'input_count' => count($packages),
             'formatted_count' => count($formattedPackages)
         ]);
+        
+        // 最後に処理したパッケージの公開日時を記録
+        $lastPackage = $packages[array_key_last($packages)];
+        $lastPackagePubDate = null;
+        
+        if (isset($lastPackage['pubDate']) && $lastPackage['pubDate'] instanceof \DateTime) {
+            $lastPackagePubDate = $lastPackage['pubDate'];
+            $this->logger?->info('Last package pubDate', [
+                'pubDate' => $lastPackagePubDate->format('Y-m-d H:i:s')
+            ]);
+        }
         
         foreach ($formattedPackages as $index => $formattedPackage) {
             $packageNumber = $index + 1;
@@ -344,6 +367,37 @@ class PackagistToBlueSkyApp
                     // Continue with the next package
                 }
             }
+        }
+        
+        // 最後に処理したパッケージの公開日時をGitHub Actions Variableに保存
+        if (!$dryRun && $lastPackagePubDate !== null) {
+            $this->saveLastPackagePubDate($lastPackagePubDate, $output);
+        }
+    }
+    
+    /**
+     * 最後のパッケージ公開日時をGitHub Actions Variableに保存する
+     *
+     * @param \DateTime $pubDate 保存する公開日時
+     * @param OutputInterface $output 出力
+     */
+    private function saveLastPackagePubDate(\DateTime $pubDate, OutputInterface $output): void
+    {
+        $output->writeln('<info>最後のパッケージ公開日時をGitHub Actions Variableに保存します</info>');
+        
+        try {
+            $success = $this->githubClient->setLastPackagePubDate($pubDate);
+            
+            if ($success) {
+                $output->writeln(sprintf(
+                    '<info>最後のパッケージ公開日時を保存しました: %s</info>',
+                    $pubDate->format('Y-m-d H:i:s')
+                ));
+            } else {
+                $output->writeln('<error>最後のパッケージ公開日時の保存に失敗しました</error>');
+            }
+        } catch (\RuntimeException $e) {
+            $output->writeln(sprintf('<error>GitHub Actions Variableの保存に失敗しました: %s</error>', $e->getMessage()));
         }
     }
 }

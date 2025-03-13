@@ -41,7 +41,7 @@ class PostPackagesCommand extends Command
                 'l',
                 InputOption::VALUE_OPTIONAL,
                 '投稿する最大パッケージ数',
-                40
+                100
             )
             ->addOption(
                 'dry-run',

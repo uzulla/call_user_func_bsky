@@ -24,14 +24,18 @@ class PackagistToBlueSkyAppTest extends TestCase
         // モックの設定
         $rssReader->method('fetchPackages')->willReturn([]);
         $blueSkyClient->method('authenticate')->willReturn(true);
-        $blueSkyClient->method('getLatestPostDate')->willReturn(null);
         
         // 環境変数の設定
         $_ENV['BLUESKY_USERNAME'] = 'test.bsky.social';
         $_ENV['BLUESKY_PASSWORD'] = 'password123';
+        $_ENV['GITHUB_TOKEN'] = 'ghp_testtoken';
+        $_ENV['GITHUB_REPOSITORY'] = 'test-owner/test-repo';
+        // テスト用のタイムスタンプを設定
+        $_ENV['LAST_ITEM_PUBDATE'] = (new \DateTime('2025-03-12 00:00:00'))->getTimestamp();
         
         // GitHubClientのモック作成
         $githubClient = $this->createMock(\Uzulla\CallUserFunc\GitHub\GitHubClient::class);
+        $githubClient->method('getLastPackagePubDate')->willReturn(null);
         
         // アプリケーションの作成
         $app = new PackagistToBlueSkyApp($rssReader, $blueSkyClient, $formatter, $githubClient);
@@ -87,16 +91,21 @@ Example package description
         $rssReader->method('fetchPackages')->willReturn($packages);
         $rssReader->method('filterPackagesSince')->willReturn($packages);
         $blueSkyClient->method('authenticate')->willReturn(true);
-        $blueSkyClient->method('getLatestPostDate')->willReturn(new \DateTime('2025-03-12 00:00:00'));
         $formatter->method('formatPackages')->willReturn($formattedPackages);
         $blueSkyClient->method('createPost')->willReturn('at://did:plc:mock123456789/app.bsky.feed.post/mock-post-id');
         
         // 環境変数の設定
         $_ENV['BLUESKY_USERNAME'] = 'test.bsky.social';
         $_ENV['BLUESKY_PASSWORD'] = 'password123';
+        $_ENV['GITHUB_TOKEN'] = 'ghp_testtoken';
+        $_ENV['GITHUB_REPOSITORY'] = 'test-owner/test-repo';
+        // テスト用のタイムスタンプを設定
+        $_ENV['LAST_ITEM_PUBDATE'] = (new \DateTime('2025-03-12 00:00:00'))->getTimestamp();
         
         // GitHubClientのモック作成
         $githubClient = $this->createMock(\Uzulla\CallUserFunc\GitHub\GitHubClient::class);
+        $githubClient->method('getLastPackagePubDate')->willReturn(new \DateTime('2025-03-12 00:00:00'));
+        $githubClient->method('setLastPackagePubDate')->willReturn(true);
         
         // アプリケーションの作成
         $app = new PackagistToBlueSkyApp($rssReader, $blueSkyClient, $formatter, $githubClient);
@@ -135,6 +144,11 @@ Example package description
         // 環境変数の設定
         $_ENV['BLUESKY_USERNAME'] = 'test.bsky.social';
         $_ENV['BLUESKY_PASSWORD'] = 'password123';
+        $_ENV['GITHUB_TOKEN'] = 'ghp_testtoken';
+        $_ENV['GITHUB_REPOSITORY'] = 'test-owner/test-repo';
+        $_ENV['GITHUB_TOKEN'] = 'ghp_testtoken';
+        $_ENV['GITHUB_REPOSITORY_OWNER'] = 'test-owner';
+        $_ENV['GITHUB_REPOSITORY_NAME'] = 'test-repo';
         
         // GitHubClientのモック作成
         $githubClient = $this->createMock(\Uzulla\CallUserFunc\GitHub\GitHubClient::class);
