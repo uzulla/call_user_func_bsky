@@ -325,6 +325,6 @@ class GitHubClient
 
         $this->logger?->notice("GitHub Actions Variable not set in GitHub Actions environment. not update last pub date.");
 
-        return true;
+        return false;
     }
 }
