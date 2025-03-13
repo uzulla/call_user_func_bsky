@@ -25,6 +25,7 @@ class PostPackagesCommand extends Command
     public function __construct()
     {
         parent::__construct('app:post-packages');
+        $this->app = AppFactory::create();
     }
     
     /**
@@ -40,7 +41,7 @@ class PostPackagesCommand extends Command
                 'l',
                 InputOption::VALUE_OPTIONAL,
                 '投稿する最大パッケージ数',
-                5
+                40
             )
             ->addOption(
                 'dry-run',
