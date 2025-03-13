@@ -44,7 +44,6 @@ try {
 // テスト対象のユーザー
 $testUsers = [
     'uzulla',
-    'avvertix',
     'non-existent-user-12345678',
 ];
 

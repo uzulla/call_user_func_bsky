@@ -14,7 +14,6 @@ $logger->pushHandler(new StreamHandler('php://stdout', Logger::DEBUG));
 // テスト対象のユーザー
 $testUsers = [
     'uzulla',
-    'avvertix',
     'non-existent-user-12345678',
 ];
 
