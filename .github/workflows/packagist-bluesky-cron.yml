@@ -10,6 +10,10 @@ on:
 jobs:
   post-packages:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+      # Note: Variables are managed through the actions scope
 
     steps:
       - name: Checkout code
