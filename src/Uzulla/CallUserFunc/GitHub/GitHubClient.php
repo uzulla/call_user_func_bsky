@@ -308,7 +308,7 @@ class GitHubClient
                     'base_uri' => $baseUrl,
                     'timeout' => 30.0, // タイムアウトを増やす
                     'headers' => [
-                        'Authorization' => 'Bearer ' . $$githubTokenForUpdateRepoVar, // Bearerトークンとして設定
+                        'Authorization' => 'Bearer ' . $githubTokenForUpdateRepoVar, // Bearerトークンとして設定
                         'Accept' => 'application/vnd.github.v3+json',
                         'User-Agent' => 'Packagist-to-BlueSky/1.0',
                         'X-GitHub-Api-Version' => '2022-11-28', // 最新のAPI versionを指定
