@@ -292,7 +292,7 @@ class GitHubClient
         
         // GitHub Actions内で実行されている場合
         $githubRepository = $_ENV['GITHUB_REPOSITORY'] ?? null;
-        $githubTokenForUpdateRepoVar = $_ENV['GH_TOKEN_FOR_UPDATE_REPO_VAR'] ?? null;
+        $githubTokenForUpdateRepoVar = $_ENV['GITHUB_TOKEN'] ?? null;
         
         if ($githubTokenForUpdateRepoVar !== null && $githubRepository !== null) {
             try {
