@@ -291,10 +291,10 @@ class GitHubClient
         ]);
         
         // GitHub Actions内で実行されている場合
-        $githubToken = $_ENV['GITHUB_TOKEN'] ?? null;
         $githubRepository = $_ENV['GITHUB_REPOSITORY'] ?? null;
+        $githubTokenForUpdateRepoVar = $_ENV['GH_TOKEN_FOR_UPDATE_REPO_VAR'] ?? null;
         
-        if ($githubToken !== null && $githubRepository !== null) {
+        if ($githubTokenForUpdateRepoVar !== null && $githubRepository !== null) {
             try {
                 $this->logger?->info('Attempting to update GitHub Actions Variable', [
                     'repository' => $githubRepository,
@@ -308,7 +308,7 @@ class GitHubClient
                     'base_uri' => $baseUrl,
                     'timeout' => 30.0, // タイムアウトを増やす
                     'headers' => [
-                        'Authorization' => 'Bearer ' . $githubToken, // Bearerトークンとして設定
+                        'Authorization' => 'Bearer ' . $$githubTokenForUpdateRepoVar, // Bearerトークンとして設定
                         'Accept' => 'application/vnd.github.v3+json',
                         'User-Agent' => 'Packagist-to-BlueSky/1.0',
                         'X-GitHub-Api-Version' => '2022-11-28', // 最新のAPI versionを指定
@@ -390,7 +390,7 @@ class GitHubClient
                 ]);
             }
         } else {
-            if ($githubToken === null) {
+            if ($githubTokenForUpdateRepoVar === null) {
                 $this->logger?->info('GITHUB_TOKEN not set, skipping GitHub Actions Variable update');
             }
             if ($githubRepository === null) {
