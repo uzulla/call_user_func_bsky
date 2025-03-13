@@ -33,8 +33,9 @@ class AppFactory
         );
         
         $blueSkyClient = new BlueSkyClient($logger);
-        
-        $githubClient = new GitHubClient($logger);
+
+        $githubToken = (string)$_ENV['GITHUB_TOKEN'] ?? null;
+        $githubClient = new GitHubClient($githubToken, $logger);
         
         $formatter = new PackagistFormatter(
             100,

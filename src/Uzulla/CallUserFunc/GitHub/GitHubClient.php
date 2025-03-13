@@ -16,22 +16,36 @@ class GitHubClient
     private const API_BASE_URL = 'https://api.github.com/';
     protected Client $httpClient;
     private ?LoggerInterface $logger;
-    
+    private ?string $authToken;
+
     /**
+     * @param string|null $authToken GitHub API認証トークン
      * @param LoggerInterface|null $logger ロガー
      */
-    public function __construct(?LoggerInterface $logger = null)
+    public function __construct(?string $authToken = null, ?LoggerInterface $logger = null)
     {
+        $this->authToken = $authToken;
+        $this->logger = $logger;
+
+        $headers = [
+            'User-Agent' => 'Packagist-to-BlueSky/1.0',
+        ];
+
+        // 認証トークンが提供された場合はヘッダーに追加
+        if ($this->authToken) {
+            $headers['Authorization'] = 'token ' . $this->authToken;
+            $this->logger?->info('GitHub API token provided, using authenticated requests');
+        } else {
+            $this->logger?->info('No GitHub API token provided, using unauthenticated requests (lower rate limits)');
+        }
+
         $this->httpClient = new Client([
             'base_uri' => self::API_BASE_URL,
             'timeout' => 10.0,
-            'headers' => [
-                'User-Agent' => 'Packagist-to-BlueSky/1.0',
-            ],
+            'headers' => $headers,
         ]);
-        $this->logger = $logger;
     }
-    
+
     /**
      * GitHubユーザーの情報を取得する
      *
