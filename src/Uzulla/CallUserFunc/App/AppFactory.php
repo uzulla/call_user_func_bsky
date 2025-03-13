@@ -25,8 +25,9 @@ class AppFactory
     {
         $logger = self::createLogger();
         
+        $rssUrl = $_ENV['PACKAGIST_RSS_URL'] ?? 'https://packagist.org/feeds/releases.rss';
         $rssReader = new PackagistRSSReader(
-            $_ENV['PACKAGIST_RSS_URL'] ?? 'https://packagist.org/feeds/releases.rss',
+            (string)$rssUrl,
             $logger
         );
         

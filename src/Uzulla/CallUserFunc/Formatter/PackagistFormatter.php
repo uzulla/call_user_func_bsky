@@ -40,9 +40,9 @@ class PackagistFormatter
     {
         $this->logger?->debug('Formatting package for post', ['package' => $package['title'] ?? 'unknown']);
         
-        $title = $package['title'] ?? '';
-        $link = $package['link'] ?? '';
-        $description = $package['description'] ?? '';
+        $title = isset($package['title']) ? (string)$package['title'] : '';
+        $link = isset($package['link']) ? (string)$package['link'] : '';
+        $description = isset($package['description']) ? (string)$package['description'] : '';
         
         // タイトルが長すぎる場合は切り詰める
         if (mb_strlen($title) > $this->maxTitleLength) {
@@ -81,7 +81,7 @@ class PackagistFormatter
     {
         $links = [];
         
-        if (isset($package['link'])) {
+        if (isset($package['link']) && is_string($package['link'])) {
             $linkText = $package['link'];
             $links[$linkText] = $linkText;
         }

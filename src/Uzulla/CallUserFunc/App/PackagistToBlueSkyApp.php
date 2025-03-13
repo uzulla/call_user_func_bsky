@@ -77,7 +77,8 @@ class PackagistToBlueSkyApp extends Command
     {
         $output->writeln('<info>Packagist.orgの新着パッケージをBlueSkyに投稿します</info>');
         
-        $limit = (int) $input->getOption('limit');
+        $limitOption = $input->getOption('limit');
+        $limit = is_numeric($limitOption) ? (int) $limitOption : 5;
         $dryRun = (bool) $input->getOption('dry-run');
         
         if ($dryRun) {
@@ -142,9 +143,9 @@ class PackagistToBlueSkyApp extends Command
             throw new \RuntimeException('BlueSkyの認証情報が設定されていません');
         }
         
-        $output->writeln(sprintf('<info>BlueSkyに認証します: %s</info>', $username));
+        $output->writeln(sprintf('<info>BlueSkyに認証します: %s</info>', (string)$username));
         
-        $this->blueSkyClient->authenticate($username, $password);
+        $this->blueSkyClient->authenticate((string)$username, (string)$password);
         
         $output->writeln('<info>BlueSkyに認証しました</info>');
     }

@@ -58,11 +58,11 @@ class BlueSkyClient
             
             $data = json_decode((string) $response->getBody(), true);
             
-            if (isset($data['accessJwt'], $data['refreshJwt'], $data['did'], $data['handle'])) {
-                $this->accessJwt = $data['accessJwt'];
-                $this->refreshJwt = $data['refreshJwt'];
-                $this->did = $data['did'];
-                $this->handle = $data['handle'];
+            if (is_array($data) && isset($data['accessJwt'], $data['refreshJwt'], $data['did'], $data['handle'])) {
+                $this->accessJwt = (string)$data['accessJwt'];
+                $this->refreshJwt = (string)$data['refreshJwt'];
+                $this->did = (string)$data['did'];
+                $this->handle = (string)$data['handle'];
                 
                 $this->logger?->info('Successfully authenticated with BlueSky API', [
                     'handle' => $this->handle,
@@ -150,9 +150,9 @@ class BlueSkyClient
             
             $data = json_decode((string) $response->getBody(), true);
             
-            if (isset($data['uri'])) {
+            if (is_array($data) && isset($data['uri'])) {
                 $this->logger?->info('Successfully created post on BlueSky', ['uri' => $data['uri']]);
-                return $data['uri'];
+                return (string)$data['uri'];
             }
             
             $this->logger?->error('Post creation response missing URI', ['data' => $data]);
@@ -194,20 +194,20 @@ class BlueSkyClient
             
             $data = json_decode((string) $response->getBody(), true);
             
-            if (isset($data['feed']) && is_array($data['feed'])) {
+            if (is_array($data) && isset($data['feed']) && is_array($data['feed'])) {
                 $posts = [];
                 
                 foreach ($data['feed'] as $item) {
-                    if (isset($item['post'], $item['post']['record'])) {
+                    if (is_array($item) && isset($item['post'], $item['post']['record']) && is_array($item['post']) && is_array($item['post']['record'])) {
                         $record = $item['post']['record'];
-                        $createdAt = isset($record['createdAt']) 
+                        $createdAt = isset($record['createdAt']) && is_string($record['createdAt'])
                             ? new \DateTime($record['createdAt']) 
                             : new \DateTime();
                         
                         $posts[] = [
-                            'uri' => $item['post']['uri'] ?? '',
-                            'cid' => $item['post']['cid'] ?? '',
-                            'text' => $record['text'] ?? '',
+                            'uri' => isset($item['post']['uri']) ? (string)$item['post']['uri'] : '',
+                            'cid' => isset($item['post']['cid']) ? (string)$item['post']['cid'] : '',
+                            'text' => isset($record['text']) ? (string)$record['text'] : '',
                             'createdAt' => $createdAt,
                             'timestamp' => $createdAt->getTimestamp(),
                         ];
