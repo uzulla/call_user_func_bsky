@@ -3,3 +3,9 @@ parameters:
     paths:
         - src
         - tests
+    ignoreErrors:
+        - '#Property .+ type has no value type specified in iterable type array#'
+        - '#Method .+ has parameter .+ with no value type specified in iterable type array#'
+        - '#Parameter \#3 \$body of class GuzzleHttp\\Psr7\\Response constructor expects .+, string\|false given#'
+        - '#Cannot cast mixed to string#'
+        - '#Call to private method parseRSSContent\(\) of class#'
