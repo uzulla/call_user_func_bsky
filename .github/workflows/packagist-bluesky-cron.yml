@@ -54,6 +54,7 @@ jobs:
           echo "GITHUB_REPOSITORY=${{ secrets.GITHUB_REPOSITORY }}" >> .env
           echo "GITHUB_REPOSITORY_OWNER=${{ secrets.GITHUB_REPOSITORY_OWNER }}" >> .env
           echo "GITHUB_REPOSITORY_NAME=${{ secrets.GITHUB_REPOSITORY_NAME }}" >> .env
+          echo "GH_TOKEN_FOR_UPDATE_REPO_VAR=${{ secrets.GH_TOKEN_FOR_UPDATE_REPO_VAR }}" >> .env
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN_FOR_UPDATE_REPO_VAR: ${{ secrets.GH_TOKEN_FOR_UPDATE_REPO_VAR }}
