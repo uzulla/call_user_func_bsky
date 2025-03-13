@@ -14,6 +14,8 @@ jobs:
       contents: read
       actions: write
       # Note: Variables are managed through the actions scope
+      # Adding id-token permission for repository variables
+      id-token: write
 
     steps:
       - name: Checkout code
