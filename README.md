@@ -57,6 +57,11 @@ GitHub Actionsのワークフローファイル（.github/workflows/your-workflo
 jobs:
   post-packages:
     runs-on: ubuntu-latest
+    # GitHub Actions Variableを更新するための権限を追加
+    permissions:
+      contents: read
+      actions: write
+    
     steps:
       - uses: actions/checkout@v3
       
@@ -75,6 +80,8 @@ jobs:
           BLUESKY_USERNAME: ${{ secrets.BLUESKY_USERNAME }}
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
 ```
+
+**重要**: GitHub Actions Variableを更新するには、ワークフローに `actions: write` 権限が必要です。これがないと、変数の更新に失敗します。
 
 この設定により：
 1. GitHub Actions Variableの `LAST_ITEM_PUBDATE` を環境変数として設定します

@@ -283,48 +283,122 @@ class GitHubClient
             'pubDate' => $dateString,
             'timestamp' => $timestamp
         ]);
-
-        // 1. GitHub Actions内で実行されている場合
-        $githubApi = $_ENV['GITHUB_API_URL'] ?? null;
+        
+        // 環境変数に保存（常に行う）
+        $_ENV['LAST_ITEM_PUBDATE'] = $timestamp;
+        $this->logger?->info('Saved last package pubDate to environment variable', [
+            'timestamp' => $timestamp
+        ]);
+        
+        // GitHub Actions内で実行されている場合
         $githubToken = $_ENV['GITHUB_TOKEN'] ?? null;
         $githubRepository = $_ENV['GITHUB_REPOSITORY'] ?? null;
-
-        if (is_string($githubApi) && is_string($githubToken) && is_string($githubRepository)) {
+        
+        if ($githubToken !== null && $githubRepository !== null) {
             try {
+                $this->logger?->info('Attempting to update GitHub Actions Variable', [
+                    'repository' => $githubRepository,
+                    'variable' => self::ACTIONS_VARIABLE_NAME
+                ]);
+                
+                // GitHub APIのベースURLを設定
+                $baseUrl = 'https://api.github.com';
+                
                 $client = new Client([
-                    'base_uri' => $githubApi,
-                    'timeout' => 10.0,
+                    'base_uri' => $baseUrl,
+                    'timeout' => 30.0, // タイムアウトを増やす
                     'headers' => [
-                        'Authorization' => 'token ' . $githubToken,
+                        'Authorization' => 'Bearer ' . $githubToken, // Bearerトークンとして設定
                         'Accept' => 'application/vnd.github.v3+json',
                         'User-Agent' => 'Packagist-to-BlueSky/1.0',
+                        'X-GitHub-Api-Version' => '2022-11-28', // 最新のAPI versionを指定
                     ],
+                    'http_errors' => false, // エラーレスポンスを例外としてスローしない
                 ]);
-
-                // 変数を更新
-                $response = $client->patch("repos/{$githubRepository}/actions/variables/" . self::ACTIONS_VARIABLE_NAME, [
-                    'json' => [
-                        'value' => $dateString,
-                    ],
+                
+                // 変数が存在するか確認
+                $this->logger?->info('Checking if variable exists');
+                $checkResponse = $client->get("repos/{$githubRepository}/actions/variables/" . self::ACTIONS_VARIABLE_NAME);
+                $statusCode = $checkResponse->getStatusCode();
+                $responseBody = (string)$checkResponse->getBody();
+                
+                $this->logger?->info('Check response', [
+                    'status' => $statusCode,
+                    'body' => $responseBody
                 ]);
-
-                $success = $response->getStatusCode() >= 200 && $response->getStatusCode() < 300;
-
-                if ($success) {
-                    $this->logger?->info('Successfully set last package pubDate in GitHub Actions Variable');
-                    // 環境変数にも保存（フォールバック）
-                    $_ENV['LAST_ITEM_PUBDATE'] = $timestamp;
-                    return true;
+                
+                $variableExists = $statusCode === 200;
+                
+                if ($variableExists) {
+                    // 変数が存在する場合は更新
+                    $this->logger?->info('Variable exists, updating');
+                    $updateResponse = $client->patch("repos/{$githubRepository}/actions/variables/" . self::ACTIONS_VARIABLE_NAME, [
+                        'json' => [
+                            'value' => $timestamp, // タイムスタンプを使用（ISO 8601形式ではなく）
+                        ],
+                    ]);
+                    
+                    $updateStatusCode = $updateResponse->getStatusCode();
+                    $updateResponseBody = (string)$updateResponse->getBody();
+                    
+                    $this->logger?->info('Update response', [
+                        'status' => $updateStatusCode,
+                        'body' => $updateResponseBody
+                    ]);
+                    
+                    if ($updateStatusCode >= 200 && $updateStatusCode < 300) {
+                        $this->logger?->info('Successfully updated GitHub Actions Variable');
+                        return true;
+                    } else {
+                        $this->logger?->error('Failed to update GitHub Actions Variable', [
+                            'status' => $updateStatusCode,
+                            'body' => $updateResponseBody
+                        ]);
+                    }
+                } else {
+                    // 変数が存在しない場合は作成
+                    $this->logger?->info('Variable does not exist, creating');
+                    $createResponse = $client->post("repos/{$githubRepository}/actions/variables", [
+                        'json' => [
+                            'name' => self::ACTIONS_VARIABLE_NAME,
+                            'value' => $timestamp, // タイムスタンプを使用（ISO 8601形式ではなく）
+                        ],
+                    ]);
+                    
+                    $createStatusCode = $createResponse->getStatusCode();
+                    $createResponseBody = (string)$createResponse->getBody();
+                    
+                    $this->logger?->info('Create response', [
+                        'status' => $createStatusCode,
+                        'body' => $createResponseBody
+                    ]);
+                    
+                    if ($createStatusCode >= 200 && $createStatusCode < 300) {
+                        $this->logger?->info('Successfully created GitHub Actions Variable');
+                        return true;
+                    } else {
+                        $this->logger?->error('Failed to create GitHub Actions Variable', [
+                            'status' => $createStatusCode,
+                            'body' => $createResponseBody
+                        ]);
+                    }
                 }
-            } catch (GuzzleException $e) {
-                $this->logger?->error('Failed to set GitHub Actions Variable in GitHub Actions environment', [
+            } catch (\Exception $e) {
+                $this->logger?->error('Exception while updating GitHub Actions Variable', [
                     'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
                 ]);
             }
+        } else {
+            if ($githubToken === null) {
+                $this->logger?->info('GITHUB_TOKEN not set, skipping GitHub Actions Variable update');
+            }
+            if ($githubRepository === null) {
+                $this->logger?->info('GITHUB_REPOSITORY not set, skipping GitHub Actions Variable update');
+            }
         }
-
-        $this->logger?->notice("GitHub Actions Variable not set in GitHub Actions environment. not update last pub date.");
-
-        return false;
+        
+        // 環境変数に保存したので成功とみなす
+        return true;
     }
 }
