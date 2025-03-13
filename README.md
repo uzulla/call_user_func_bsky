@@ -61,7 +61,7 @@ jobs:
     permissions:
       contents: read
       actions: write
-      administration: write
+      # Note: Variables are managed through the actions scope
     
     steps:
       - uses: actions/checkout@v3
