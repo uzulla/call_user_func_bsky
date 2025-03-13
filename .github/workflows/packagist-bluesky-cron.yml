@@ -48,7 +48,10 @@ jobs:
           echo "PACKAGIST_RSS_URL=https://packagist.org/feeds/releases.rss" >> .env
           echo "LOG_LEVEL=info" >> .env
           echo "LAST_ITEM_PUBDATE=${{ vars.LAST_ITEM_PUBDATE || '1' }}" >> .env
-      
+          echo "GITHUB_REPOSITORY=${{ secrets.GITHUB_REPOSITORY }}" >> .env
+          echo "GITHUB_REPOSITORY_OWNER=${{ secrets.GITHUB_REPOSITORY_OWNER }}" >> .env
+          echo "GITHUB_REPOSITORY_NAME=${{ secrets.GITHUB_REPOSITORY_NAME }}" >> .env
+
       - name: Run post-packages command
         run: php bin/console app:post-packages
         env:
