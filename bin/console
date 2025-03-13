@@ -1,0 +1,25 @@
+#!/usr/bin/env php
+<?php
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use Symfony\Component\Console\Application;
+use Symfony\Component\Dotenv\Dotenv;
+use Uzulla\CallUserFunc\Command\PostPackagesCommand;
+
+// Load environment variables
+if (file_exists(__DIR__ . '/../.env')) {
+    (new Dotenv())->load(__DIR__ . '/../.env');
+} elseif (file_exists(__DIR__ . '/../.env.local')) {
+    (new Dotenv())->load(__DIR__ . '/../.env.local');
+}
+
+// ログディレクトリの作成
+$logDir = __DIR__ . '/../var/log';
+if (!is_dir($logDir)) {
+    mkdir($logDir, 0755, true);
+}
+
+$application = new Application('Packagist to BlueSky', '1.0.0');
+$application->add(new PostPackagesCommand());
+$application->run();

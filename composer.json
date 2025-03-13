@@ -1,0 +1,27 @@
+{
+    "name": "uzulla/call-user-func",
+    "description": "A tool to post new Packagist packages to BlueSky",
+    "type": "project",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Uzulla\\CallUserFunc\\": "src/Uzulla/CallUserFunc/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Uzulla"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "guzzlehttp/guzzle": "^7.8",
+        "symfony/console": "^7.0",
+        "monolog/monolog": "^3.5",
+        "symfony/dotenv": "^7.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^12.0",
+        "phpstan/phpstan": "^2.1"
+    }
+}
