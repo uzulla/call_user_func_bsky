@@ -56,7 +56,7 @@ class PackagistToBlueSkyApp extends Command
                 'l',
                 InputOption::VALUE_OPTIONAL,
                 '投稿する最大パッケージ数',
-                5
+                50
             )
             ->addOption(
                 'dry-run',
@@ -207,18 +207,38 @@ class PackagistToBlueSkyApp extends Command
         $output->writeln(sprintf('<info>%d件のパッケージを投稿します</info>', count($packages)));
         
         $formattedPackages = $this->formatter->formatPackages($packages);
+        $this->logger?->info('Formatted packages for posting', [
+            'input_count' => count($packages),
+            'formatted_count' => count($formattedPackages)
+        ]);
         
         foreach ($formattedPackages as $index => $formattedPackage) {
-            $output->writeln(sprintf('<info>パッケージ %d/%d を投稿します</info>', $index + 1, count($formattedPackages)));
+            $packageNumber = $index + 1;
+            $output->writeln(sprintf('<info>パッケージ %d/%d を投稿します</info>', $packageNumber, count($formattedPackages)));
             $output->writeln($formattedPackage['text']);
             
             if (!$dryRun) {
-                $postUri = $this->blueSkyClient->createPost(
-                    $formattedPackage['text'],
-                    $formattedPackage['links']
-                );
-                
-                $output->writeln(sprintf('<info>投稿しました: %s</info>', $postUri));
+                try {
+                    $postUri = $this->blueSkyClient->createPost(
+                        $formattedPackage['text'],
+                        $formattedPackage['links']
+                    );
+                    
+                    $this->logger?->info('Posted package to BlueSky', [
+                        'package_number' => $packageNumber,
+                        'total_packages' => count($formattedPackages),
+                        'uri' => $postUri
+                    ]);
+                    
+                    $output->writeln(sprintf('<info>投稿しました: %s</info>', $postUri));
+                } catch (\Exception $e) {
+                    $this->logger?->error('Failed to post package', [
+                        'package_number' => $packageNumber,
+                        'error' => $e->getMessage()
+                    ]);
+                    $output->writeln(sprintf('<error>投稿に失敗しました: %s</error>', $e->getMessage()));
+                    // Continue with the next package
+                }
             }
         }
     }

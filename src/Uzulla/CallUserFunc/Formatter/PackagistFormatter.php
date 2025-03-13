@@ -96,7 +96,7 @@ class PackagistFormatter
      * @param int $maxPackages 最大パッケージ数
      * @return array<int, array{text: string, links: array<string, string>}> 整形されたテキストとリンク情報の配列
      */
-    public function formatPackages(array $packages, int $maxPackages = 10): array
+    public function formatPackages(array $packages, int $maxPackages = 50): array
     {
         $this->logger?->info('Formatting multiple packages', [
             'total' => count($packages),
