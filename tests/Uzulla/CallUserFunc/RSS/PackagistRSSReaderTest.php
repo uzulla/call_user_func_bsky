@@ -36,26 +36,34 @@ XML;
 
     public function testParseRSSContent(): void
     {
-        $reader = new class($this->sampleRSS) extends PackagistRSSReader {
-            private string $sampleContent;
+        // テスト用のモッククライアントを作成
+        $mockClient = $this->createMock(\GuzzleHttp\Client::class);
+        $mockResponse = $this->createMock(\Psr\Http\Message\ResponseInterface::class);
+        $mockStream = $this->createMock(\Psr\Http\Message\StreamInterface::class);
+        $mockStream->method('__toString')->willReturn($this->sampleRSS);
+        $mockResponse->method('getBody')->willReturn($mockStream);
+        $mockClient->method('get')->willReturn($mockResponse);
+        
+        $reader = new class($mockClient) extends PackagistRSSReader {
+            private \GuzzleHttp\Client $mockClient;
             
-            public function __construct(string $sampleContent)
+            public function __construct(\GuzzleHttp\Client $mockClient)
             {
                 parent::__construct();
-                $this->sampleContent = $sampleContent;
+                $this->mockClient = $mockClient;
             }
             
-            public function fetchPackages(): array
+            protected function getHttpClient(): \GuzzleHttp\Client
             {
-                return $this->parseRSSContent($this->sampleContent);
+                return $this->mockClient;
             }
         };
         
         $packages = $reader->fetchPackages();
         
         $this->assertCount(2, $packages);
-        $this->assertEquals('example/package (1.0.0)', $packages[0]['title']);
-        $this->assertEquals('example/older-package (0.9.0)', $packages[1]['title']);
+        $this->assertEquals('example/older-package (0.9.0)', $packages[0]['title']);
+        $this->assertEquals('example/package (1.0.0)', $packages[1]['title']);
     }
     
     public function testFilterPackagesSince(): void

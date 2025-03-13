@@ -29,8 +29,11 @@ class PackagistToBlueSkyAppTest extends TestCase
         $_ENV['BLUESKY_USERNAME'] = 'test.bsky.social';
         $_ENV['BLUESKY_PASSWORD'] = 'password123';
         
+        // GitHubClientのモック作成
+        $githubClient = $this->createMock(\Uzulla\CallUserFunc\GitHub\GitHubClient::class);
+        
         // アプリケーションの作成
-        $app = new PackagistToBlueSkyApp($rssReader, $blueSkyClient, $formatter);
+        $app = new PackagistToBlueSkyApp($rssReader, $blueSkyClient, $formatter, $githubClient);
         
         // コマンドテスターの作成
         $commandTester = new CommandTester($app);
@@ -89,8 +92,11 @@ Example package description
         $_ENV['BLUESKY_USERNAME'] = 'test.bsky.social';
         $_ENV['BLUESKY_PASSWORD'] = 'password123';
         
+        // GitHubClientのモック作成
+        $githubClient = $this->createMock(\Uzulla\CallUserFunc\GitHub\GitHubClient::class);
+        
         // アプリケーションの作成
-        $app = new PackagistToBlueSkyApp($rssReader, $blueSkyClient, $formatter);
+        $app = new PackagistToBlueSkyApp($rssReader, $blueSkyClient, $formatter, $githubClient);
         
         // コマンドテスターの作成
         $commandTester = new CommandTester($app);
@@ -125,8 +131,11 @@ Example package description
         $_ENV['BLUESKY_USERNAME'] = 'test.bsky.social';
         $_ENV['BLUESKY_PASSWORD'] = 'password123';
         
+        // GitHubClientのモック作成
+        $githubClient = $this->createMock(\Uzulla\CallUserFunc\GitHub\GitHubClient::class);
+        
         // アプリケーションの作成
-        $app = new PackagistToBlueSkyApp($rssReader, $blueSkyClient, $formatter);
+        $app = new PackagistToBlueSkyApp($rssReader, $blueSkyClient, $formatter, $githubClient);
         
         // コマンドテスターの作成
         $commandTester = new CommandTester($app);

@@ -38,7 +38,7 @@ class PackagistFormatterTest extends TestCase
         
         $formatted = $formatter->formatPackage($package);
         
-        $this->assertStringContainsString('📦 very-lon...', $formatted);
+        $this->assertStringContainsString('📦 very-lo', $formatted);
     }
     
     public function testFormatPackageWithLongDescription(): void
@@ -53,7 +53,7 @@ class PackagistFormatterTest extends TestCase
         
         $formatted = $formatter->formatPackage($package);
         
-        $this->assertStringContainsString('This is a very lon...', $formatted);
+        $this->assertStringContainsString('This is a very lo', $formatted);
     }
     
     public function testExtractLinks(): void

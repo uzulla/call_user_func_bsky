@@ -7,6 +7,7 @@ namespace Uzulla\CallUserFunc\App;
 use Psr\Log\LoggerInterface;
 use Uzulla\CallUserFunc\BlueSky\BlueSkyClient;
 use Uzulla\CallUserFunc\Formatter\PackagistFormatter;
+use Uzulla\CallUserFunc\GitHub\GitHubClient;
 use Uzulla\CallUserFunc\RSS\PackagistRSSReader;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -21,18 +22,21 @@ class PackagistToBlueSkyApp extends Command
     private PackagistRSSReader $rssReader;
     private BlueSkyClient $blueSkyClient;
     private PackagistFormatter $formatter;
+    private GitHubClient $githubClient;
     private ?LoggerInterface $logger;
     
     /**
      * @param PackagistRSSReader $rssReader RSSリーダー
      * @param BlueSkyClient $blueSkyClient BlueSkyクライアント
      * @param PackagistFormatter $formatter フォーマッター
+     * @param GitHubClient $githubClient GitHubクライアント
      * @param LoggerInterface|null $logger ロガー
      */
     public function __construct(
         PackagistRSSReader $rssReader,
         BlueSkyClient $blueSkyClient,
         PackagistFormatter $formatter,
+        GitHubClient $githubClient,
         ?LoggerInterface $logger = null
     ) {
         parent::__construct('app:post-packages');
@@ -40,6 +44,7 @@ class PackagistToBlueSkyApp extends Command
         $this->rssReader = $rssReader;
         $this->blueSkyClient = $blueSkyClient;
         $this->formatter = $formatter;
+        $this->githubClient = $githubClient;
         $this->logger = $logger;
     }
     
@@ -73,7 +78,7 @@ class PackagistToBlueSkyApp extends Command
      * @param OutputInterface $output 出力
      * @return int 終了コード
      */
-    public function run(InputInterface $input, OutputInterface $output): int
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $output->writeln('<info>Packagist.orgの新着パッケージをBlueSkyに投稿します</info>');
         
@@ -94,6 +99,9 @@ class PackagistToBlueSkyApp extends Command
             
             // Packagistから新着パッケージを取得
             $packages = $this->fetchPackages($output);
+            
+            // スパムの可能性があるパッケージをフィルタリング
+            $packages = $this->filterSpamPackages($packages, $output);
             
             // 最新の投稿以降のパッケージをフィルタリング
             if ($lastPostDate !== null) {
@@ -192,7 +200,76 @@ class PackagistToBlueSkyApp extends Command
         
         $output->writeln(sprintf('<info>取得したパッケージ: %d件</info>', count($packages)));
         
+        // パッケージに詳細情報を追加
+        $output->writeln('<info>パッケージに詳細情報を追加します</info>');
+        $packages = $this->rssReader->enrichPackagesWithDetails($packages);
+        
         return $packages;
+    }
+    
+    /**
+     * スパムの可能性があるパッケージをフィルタリングする
+     *
+     * @param array<int, array<string, mixed>> $packages パッケージ情報の配列
+     * @param OutputInterface $output 出力
+     * @return array<int, array<string, mixed>> フィルタリングされたパッケージ情報の配列
+     */
+    private function filterSpamPackages(array $packages, OutputInterface $output): array
+    {
+        $output->writeln('<info>スパムの可能性があるパッケージをフィルタリングします</info>');
+        
+        $filteredPackages = [];
+        $skippedCount = 0;
+        
+        foreach ($packages as $package) {
+            // リポジトリURLがない場合はスキップしない
+            if (!isset($package['repository_url']) || !is_string($package['repository_url'])) {
+                $filteredPackages[] = $package;
+                continue;
+            }
+            
+            $repositoryUrl = $package['repository_url'];
+            
+            // GitHubリポジトリでない場合はスキップしない
+            if (strpos($repositoryUrl, 'github.com') === false) {
+                $filteredPackages[] = $package;
+                continue;
+            }
+            
+            // GitHubユーザー名を抽出
+            $username = $this->githubClient->extractUsernameFromRepositoryUrl($repositoryUrl);
+            
+            // ユーザー名が抽出できない場合はスキップしない
+            if ($username === null) {
+                $filteredPackages[] = $package;
+                continue;
+            }
+            
+            // ユーザーが存在しないか、新しい場合はスキップ
+            if (!$this->githubClient->userExists($username) || $this->githubClient->isNewUser($username)) {
+                $this->logger?->info('Skipping package from new or non-existent GitHub user', [
+                    'package' => $package['title'] ?? 'unknown',
+                    'username' => $username,
+                ]);
+                $output->writeln(sprintf(
+                    '<comment>スパムの可能性があるためスキップします: %s (GitHubユーザー: %s)</comment>',
+                    $package['title'] ?? 'unknown',
+                    (string)$username
+                ));
+                $skippedCount++;
+                continue;
+            }
+            
+            $filteredPackages[] = $package;
+        }
+        
+        $output->writeln(sprintf(
+            '<info>スパムフィルタリング結果: %d件中%d件をスキップしました</info>',
+            count($packages),
+            $skippedCount
+        ));
+        
+        return $filteredPackages;
     }
     
     /**

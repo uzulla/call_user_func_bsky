@@ -14,23 +14,13 @@ use GuzzleHttp\Middleware;
 
 class BlueSkyClientTest extends TestCase
 {
-    private array $container = [];
+
     
-    private function createMockClient(array $responses): Client
-    {
-        $this->container = [];
-        $history = Middleware::history($this->container);
-        
-        $mock = new MockHandler($responses);
-        $handlerStack = HandlerStack::create($mock);
-        $handlerStack->push($history);
-        
-        return new Client(['handler' => $handlerStack]);
-    }
+
     
     public function testAuthenticate(): void
     {
-        $mockClient = $this->createMockClient([
+        $mockHandler = new MockHandler([
             new Response(200, [], json_encode([
                 'accessJwt' => 'mock-access-token',
                 'refreshJwt' => 'mock-refresh-token',
@@ -39,16 +29,19 @@ class BlueSkyClientTest extends TestCase
             ])),
         ]);
         
+        $handlerStack = HandlerStack::create($mockHandler);
+        $mockClient = new Client(['handler' => $handlerStack, 'base_uri' => 'https://bsky.social/xrpc/']);
+        
         $client = new class($mockClient) extends BlueSkyClient {
             private Client $mockClient;
             
             public function __construct(Client $mockClient)
             {
-                parent::__construct();
                 $this->mockClient = $mockClient;
+                parent::__construct();
             }
             
-            protected function getHttpClient(): Client
+            protected function createHttpClient(): Client
             {
                 return $this->mockClient;
             }
@@ -61,7 +54,7 @@ class BlueSkyClientTest extends TestCase
     
     public function testCreatePost(): void
     {
-        $mockClient = $this->createMockClient([
+        $mockHandler = new MockHandler([
             // 認証レスポンス
             new Response(200, [], json_encode([
                 'accessJwt' => 'mock-access-token',
@@ -76,16 +69,19 @@ class BlueSkyClientTest extends TestCase
             ])),
         ]);
         
+        $handlerStack = HandlerStack::create($mockHandler);
+        $mockClient = new Client(['handler' => $handlerStack, 'base_uri' => 'https://bsky.social/xrpc/']);
+        
         $client = new class($mockClient) extends BlueSkyClient {
             private Client $mockClient;
             
             public function __construct(Client $mockClient)
             {
-                parent::__construct();
                 $this->mockClient = $mockClient;
+                parent::__construct();
             }
             
-            protected function getHttpClient(): Client
+            protected function createHttpClient(): Client
             {
                 return $this->mockClient;
             }
@@ -102,7 +98,7 @@ class BlueSkyClientTest extends TestCase
     
     public function testGetLatestPosts(): void
     {
-        $mockClient = $this->createMockClient([
+        $mockHandler = new MockHandler([
             // 認証レスポンス
             new Response(200, [], json_encode([
                 'accessJwt' => 'mock-access-token',
@@ -137,16 +133,19 @@ class BlueSkyClientTest extends TestCase
             ])),
         ]);
         
+        $handlerStack = HandlerStack::create($mockHandler);
+        $mockClient = new Client(['handler' => $handlerStack, 'base_uri' => 'https://bsky.social/xrpc/']);
+        
         $client = new class($mockClient) extends BlueSkyClient {
             private Client $mockClient;
             
             public function __construct(Client $mockClient)
             {
-                parent::__construct();
                 $this->mockClient = $mockClient;
+                parent::__construct();
             }
             
-            protected function getHttpClient(): Client
+            protected function createHttpClient(): Client
             {
                 return $this->mockClient;
             }

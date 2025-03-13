@@ -20,7 +20,8 @@ class BlueSkyClient
     private Client $httpClient;
     private ?LoggerInterface $logger;
     private ?string $accessJwt = null;
-    private ?string $refreshJwt = null;
+    /** @var string|null */
+    private $refreshJwt = null;
     private ?string $did = null;
     private ?string $handle = null;
     
@@ -29,11 +30,31 @@ class BlueSkyClient
      */
     public function __construct(?LoggerInterface $logger = null)
     {
-        $this->httpClient = new Client([
+        $this->httpClient = $this->createHttpClient();
+        $this->logger = $logger;
+    }
+    
+    /**
+     * HTTPクライアントを作成する
+     *
+     * @return Client HTTPクライアント
+     */
+    protected function createHttpClient(): Client
+    {
+        return new Client([
             'base_uri' => self::API_BASE_URL,
             'timeout' => 10.0,
         ]);
-        $this->logger = $logger;
+    }
+    
+    /**
+     * HTTPクライアントを取得する（テスト用）
+     *
+     * @return Client HTTPクライアント
+     */
+    protected function getHttpClient(): Client
+    {
+        return $this->httpClient;
     }
     
     /**
@@ -49,7 +70,7 @@ class BlueSkyClient
         try {
             $this->logger?->info('Authenticating with BlueSky API', ['username' => $username]);
             
-            $response = $this->httpClient->post(self::AUTH_ENDPOINT, [
+            $response = $this->getHttpClient()->post(self::AUTH_ENDPOINT, [
                 'json' => [
                     'identifier' => $username,
                     'password' => $password,
@@ -137,7 +158,7 @@ class BlueSkyClient
                 }
             }
             
-            $response = $this->httpClient->post(self::POST_ENDPOINT, [
+            $response = $this->getHttpClient()->post(self::POST_ENDPOINT, [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $this->accessJwt,
                 ],
@@ -182,7 +203,7 @@ class BlueSkyClient
         try {
             $this->logger?->info('Fetching latest posts', ['limit' => $limit]);
             
-            $response = $this->httpClient->get('app.bsky.feed.getAuthorFeed', [
+            $response = $this->getHttpClient()->get('app.bsky.feed.getAuthorFeed', [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $this->accessJwt,
                 ],
@@ -198,7 +219,8 @@ class BlueSkyClient
                 $posts = [];
                 
                 foreach ($data['feed'] as $item) {
-                    if (is_array($item) && isset($item['post'], $item['post']['record']) && is_array($item['post']) && is_array($item['post']['record'])) {
+                    if (is_array($item) && isset($item['post']) && is_array($item['post']) && 
+                        isset($item['post']['record']) && is_array($item['post']['record'])) {
                         $record = $item['post']['record'];
                         $createdAt = isset($record['createdAt']) && is_string($record['createdAt'])
                             ? new \DateTime($record['createdAt']) 
@@ -238,7 +260,7 @@ class BlueSkyClient
         try {
             $posts = $this->getLatestPosts(1);
             
-            if (!empty($posts) && isset($posts[0]['createdAt'])) {
+            if (!empty($posts) && isset($posts[0]['createdAt']) && $posts[0]['createdAt'] instanceof \DateTime) {
                 return $posts[0]['createdAt'];
             }
             

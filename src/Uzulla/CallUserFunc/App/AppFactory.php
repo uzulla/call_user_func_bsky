@@ -9,6 +9,7 @@ use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 use Uzulla\CallUserFunc\BlueSky\BlueSkyClient;
 use Uzulla\CallUserFunc\Formatter\PackagistFormatter;
+use Uzulla\CallUserFunc\GitHub\GitHubClient;
 use Uzulla\CallUserFunc\RSS\PackagistRSSReader;
 
 /**
@@ -33,6 +34,8 @@ class AppFactory
         
         $blueSkyClient = new BlueSkyClient($logger);
         
+        $githubClient = new GitHubClient($logger);
+        
         $formatter = new PackagistFormatter(
             100,
             200,
@@ -43,6 +46,7 @@ class AppFactory
             $rssReader,
             $blueSkyClient,
             $formatter,
+            $githubClient,
             $logger
         );
     }

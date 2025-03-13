@@ -4,8 +4,11 @@ parameters:
         - src
         - tests
     ignoreErrors:
-        - '#Property .+ type has no value type specified in iterable type array#'
-        - '#Method .+ has parameter .+ with no value type specified in iterable type array#'
-        - '#Parameter \#3 \$body of class GuzzleHttp\\Psr7\\Response constructor expects .+, string\|false given#'
-        - '#Cannot cast mixed to string#'
-        - '#Call to private method parseRSSContent\(\) of class#'
+        - '#Property .+::\$refreshJwt is never read, only written.#'
+        - '#Parameter \#1 \$string of function mb_strlen expects string, string\|null given.#'
+        - '#Parameter \#1 \$string of function mb_substr expects string, string\|null given.#'
+        - '#Property .+::\$container \(.+\) does not accept array\|ArrayAccess<int, array>.#'
+        - '#Cannot cast mixed to string.#'
+        - '#Parameter \#3 \$body of class GuzzleHttp\\Psr7\\Response constructor expects .+, string\|false given.#'
+        - '#Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given.#'
+        - '#Offset .+ on non-empty-array.+ on left side of \?\? always exists and is not nullable.#'

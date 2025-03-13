@@ -49,6 +49,12 @@ class PackagistFormatter
             $title = mb_substr($title, 0, $this->maxTitleLength - 3) . '...';
         }
         
+        // 説明文の型を確実に文字列に
+        $description = (string)$description;
+        
+        // URLを<snip>に置換
+        $description = preg_replace('/(https?:\/\/[^\s]+)/', '<snip>', $description);
+        
         // 説明が長すぎる場合は切り詰める
         if (mb_strlen($description) > $this->maxDescriptionLength) {
             $description = mb_substr($description, 0, $this->maxDescriptionLength - 3) . '...';
@@ -64,7 +70,12 @@ class PackagistFormatter
             $text .= "{$description}\n\n";
         }
         
-        $text .= "🔗 {$link}";
+        // リポジトリURLがある場合はそれを表示
+        if (isset($package['repository_url']) && is_string($package['repository_url'])) {
+            $text .= "🔗 {$package['repository_url']}";
+        } else {
+            $text .= "🔗 {$link}";
+        }
         
         $this->logger?->debug('Formatted package text', ['text_length' => mb_strlen($text)]);
         
@@ -81,6 +92,16 @@ class PackagistFormatter
     {
         $links = [];
         
+        // リポジトリURLがある場合はそれを優先
+        if (isset($package['repository_url']) && is_string($package['repository_url'])) {
+            $repositoryUrl = $package['repository_url'];
+            // テキスト内のリンクとして表示されるURLを探す
+            $linkText = "🔗 {$repositoryUrl}";
+            $links[$linkText] = $repositoryUrl;
+            return $links;
+        }
+        
+        // 通常のリンク
         if (isset($package['link']) && is_string($package['link'])) {
             $linkText = $package['link'];
             $links[$linkText] = $linkText;
