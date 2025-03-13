@@ -292,7 +292,7 @@ class GitHubClient
         
         // GitHub Actions内で実行されている場合
         $githubRepository = $_ENV['GITHUB_REPOSITORY'] ?? null;
-        $githubTokenForUpdateRepoVar = $_ENV['GITHUB_TOKEN'] ?? null;
+        $githubTokenForUpdateRepoVar = $_ENV['GH_TOKEN_FOR_UPDATE_REPO_VAR'] ?? null;
         
         if ($githubTokenForUpdateRepoVar !== null && $githubRepository !== null) {
             try {
@@ -318,7 +318,7 @@ class GitHubClient
                 
                 // 変数が存在するか確認
                 $this->logger?->info('Checking if variable exists');
-                $checkResponse = $client->get("repos/{$githubRepository}/actions/variables/" . self::ACTIONS_VARIABLE_NAME);
+                $checkResponse = $client->get("/repos/{$githubRepository}/actions/variables/" . self::ACTIONS_VARIABLE_NAME);
                 $statusCode = $checkResponse->getStatusCode();
                 $responseBody = (string)$checkResponse->getBody();
                 
@@ -332,7 +332,7 @@ class GitHubClient
                 if ($variableExists) {
                     // 変数が存在する場合は更新
                     $this->logger?->info('Variable exists, updating');
-                    $updateResponse = $client->patch("repos/{$githubRepository}/actions/variables/" . self::ACTIONS_VARIABLE_NAME, [
+                    $updateResponse = $client->patch("/repos/{$githubRepository}/actions/variables/" . self::ACTIONS_VARIABLE_NAME, [
                         'json' => [
                             'value' => $timestamp, // タイムスタンプを使用（ISO 8601形式ではなく）
                         ],
@@ -358,7 +358,7 @@ class GitHubClient
                 } else {
                     // 変数が存在しない場合は作成
                     $this->logger?->info('Variable does not exist, creating');
-                    $createResponse = $client->post("repos/{$githubRepository}/actions/variables", [
+                    $createResponse = $client->post("/repos/{$githubRepository}/actions/variables", [
                         'json' => [
                             'name' => self::ACTIONS_VARIABLE_NAME,
                             'value' => $timestamp, // タイムスタンプを使用（ISO 8601形式ではなく）

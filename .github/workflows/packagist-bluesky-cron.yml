@@ -56,7 +56,7 @@ jobs:
           echo "GITHUB_REPOSITORY_NAME=${{ secrets.GITHUB_REPOSITORY_NAME }}" >> .env
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN_FOR_UPDATE_REPO_VAR: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN_FOR_UPDATE_REPO_VAR: ${{ secrets.GH_TOKEN_FOR_UPDATE_REPO_VAR }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
           GITHUB_REPOSITORY_NAME: ${{ github.event.repository.name }}
@@ -65,7 +65,7 @@ jobs:
         run: php bin/console app:post-packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN_FOR_UPDATE_REPO_VAR: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN_FOR_UPDATE_REPO_VAR: ${{ secrets.GH_TOKEN_FOR_UPDATE_REPO_VAR }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
           GITHUB_REPOSITORY_NAME: ${{ github.event.repository.name }}
