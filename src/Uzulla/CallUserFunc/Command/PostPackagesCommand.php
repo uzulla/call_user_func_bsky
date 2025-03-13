@@ -16,9 +16,12 @@ use Uzulla\CallUserFunc\App\AppFactory;
 class PostPackagesCommand extends Command
 {
     /**
-     * コマンド名
+     * コンストラクタ
      */
-    protected static $defaultName = 'app:post-packages';
+    public function __construct()
+    {
+        parent::__construct('app:post-packages');
+    }
     
     /**
      * コマンドの設定
