@@ -1,0 +1,48 @@
+name: Packagist to BlueSky CRON
+
+on:
+  schedule:
+    # Run every 30 minutes
+    - cron: '*/30 * * * *'
+  # Allow manual triggering for testing
+  workflow_dispatch:
+
+jobs:
+  post-packages:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, zip, curl
+          coverage: none
+      
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict
+      
+      - name: Cache Composer packages
+        id: composer-cache
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+      
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+      
+      - name: Create .env file
+        run: |
+          echo "BLUESKY_USERNAME=${{ secrets.BLUESKY_USERNAME }}" > .env
+          echo "BLUESKY_PASSWORD=${{ secrets.BLUESKY_PASSWORD }}" >> .env
+          echo "PACKAGIST_RSS_URL=https://packagist.org/feeds/releases.rss" >> .env
+          echo "LOG_LEVEL=info" >> .env
+      
+      - name: Run post-packages command
+        run: php bin/console app:post-packages
