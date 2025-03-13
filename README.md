@@ -49,47 +49,6 @@ LOG_LEVEL=info
 
 変数名は `LAST_ITEM_PUBDATE` で、UNIX秒形式の日時文字列が保存されます。
 
-#### GitHub Actionsでの設定
-
-GitHub Actionsのワークフローファイル（.github/workflows/your-workflow.yml）で、以下のように設定します：
-
-```yaml
-jobs:
-  post-packages:
-    runs-on: ubuntu-latest
-    # GitHub Actions Variableを更新するための権限を追加
-    permissions:
-      contents: read
-      actions: write
-      # Note: Variables are managed through the actions scope
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      # 他の必要なセットアップステップ...
-      
-      # GitHub Actions Variableから環境変数に設定
-      - name: Set environment variables
-        run: |
-          echo "LAST_ITEM_PUBDATE=${{ vars.LAST_ITEM_PUBDATE || '1' }}" >> $GITHUB_ENV
-      
-      # アプリケーションの実行
-      - name: Run application
-        run: php bin/console app:post-packages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BLUESKY_USERNAME: ${{ secrets.BLUESKY_USERNAME }}
-          BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
-```
-
-**重要**: GitHub Actions Variableを更新するには、ワークフローに `actions: write` 権限が必要です。これがないと、変数の更新に失敗します。
-
-この設定により：
-1. GitHub Actions Variableの `LAST_ITEM_PUBDATE` を環境変数として設定します
-2. 変数が存在しない場合は、デフォルト値として `1` を使用します
-3. アプリケーションは環境変数から最後に処理したパッケージの公開日時を取得します
-4. 処理後、アプリケーションはGitHub API経由でGitHub Actions Variableを更新します
-
 ## 使用方法
 
 ```bash
