@@ -53,3 +53,4 @@ jobs:
         run: php bin/console app:post-packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN_FOR_UPDATE_REPO_VAR: ${{ secrets.GITHUB_TOKEN }}
