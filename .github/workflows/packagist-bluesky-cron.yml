@@ -3,7 +3,7 @@ name: Packagist to BlueSky CRON
 on:
   schedule:
     # Run every 30 minutes
-    - cron: '*/30 * * * *'
+    - cron: '*/10 * * * *'
   # Allow manual triggering for testing
   workflow_dispatch:
 
