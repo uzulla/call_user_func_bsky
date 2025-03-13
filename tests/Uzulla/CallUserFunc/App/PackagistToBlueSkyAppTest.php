@@ -7,6 +7,7 @@ namespace Tests\Uzulla\CallUserFunc\App;
 use PHPUnit\Framework\TestCase;
 use Uzulla\CallUserFunc\App\PackagistToBlueSkyApp;
 use Uzulla\CallUserFunc\BlueSky\BlueSkyClient;
+use Uzulla\CallUserFunc\Command\PostPackagesCommand;
 use Uzulla\CallUserFunc\Formatter\PackagistFormatter;
 use Uzulla\CallUserFunc\RSS\PackagistRSSReader;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -34,10 +35,12 @@ class PackagistToBlueSkyAppTest extends TestCase
         
         // アプリケーションの作成
         $app = new PackagistToBlueSkyApp($rssReader, $blueSkyClient, $formatter, $githubClient);
-        
+
         // コマンドテスターの作成
-        $commandTester = new CommandTester($app);
-        
+        $command = new PostPackagesCommand();
+        $command->setApp($app);
+        $commandTester = new CommandTester($command);
+
         // コマンドの実行
         $exitCode = $commandTester->execute([
             '--dry-run' => true,
@@ -97,10 +100,12 @@ Example package description
         
         // アプリケーションの作成
         $app = new PackagistToBlueSkyApp($rssReader, $blueSkyClient, $formatter, $githubClient);
-        
+
         // コマンドテスターの作成
-        $commandTester = new CommandTester($app);
-        
+        $command = new PostPackagesCommand();
+        $command->setApp($app);
+        $commandTester = new CommandTester($command);
+
         // コマンドの実行（ドライラン）
         $exitCode = $commandTester->execute([
             '--dry-run' => true,
@@ -136,10 +141,12 @@ Example package description
         
         // アプリケーションの作成
         $app = new PackagistToBlueSkyApp($rssReader, $blueSkyClient, $formatter, $githubClient);
-        
+
         // コマンドテスターの作成
-        $commandTester = new CommandTester($app);
-        
+        $command = new PostPackagesCommand();
+        $command->setApp($app);
+        $commandTester = new CommandTester($command);
+
         // コマンドの実行
         $exitCode = $commandTester->execute([]);
         

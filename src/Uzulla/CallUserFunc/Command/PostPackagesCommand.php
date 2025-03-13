@@ -9,12 +9,16 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Uzulla\CallUserFunc\App\AppFactory;
+use Uzulla\CallUserFunc\App\PackagistToBlueSkyApp;
+use Uzulla\CallUserFunc\RSS\PackagistRSSReader;
 
 /**
  * パッケージ投稿コマンド
  */
 class PostPackagesCommand extends Command
 {
+    private PackagistToBlueSkyApp $app;
+
     /**
      * コンストラクタ
      */
@@ -45,6 +49,11 @@ class PostPackagesCommand extends Command
                 '実際に投稿せずに処理内容を表示するのみ'
             );
     }
+
+    public function setApp(PackagistToBlueSkyApp $app): void
+    {
+        $this->app = $app;
+    }
     
     /**
      * コマンドの実行
@@ -55,7 +64,7 @@ class PostPackagesCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $app = AppFactory::create();
+        $app = $this->app;
         
         $limit = $input->getOption('limit');
         $dryRun = $input->getOption('dry-run');
