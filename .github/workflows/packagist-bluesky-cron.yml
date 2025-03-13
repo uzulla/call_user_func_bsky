@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: read
       actions: write
-      administration: write
+      # Note: Variables are managed through the actions scope
 
     steps:
       - name: Checkout code
@@ -47,6 +47,9 @@ jobs:
           echo "BLUESKY_PASSWORD=${{ secrets.BLUESKY_PASSWORD }}" >> .env
           echo "PACKAGIST_RSS_URL=https://packagist.org/feeds/releases.rss" >> .env
           echo "LOG_LEVEL=info" >> .env
+          echo "LAST_ITEM_PUBDATE=${{ vars.LAST_ITEM_PUBDATE || '1' }}" >> .env
       
       - name: Run post-packages command
         run: php bin/console app:post-packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
