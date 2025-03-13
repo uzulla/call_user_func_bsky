@@ -80,7 +80,7 @@ class AppFactory
         
         $logger = new Logger('packagist-to-bluesky');
         $logger->pushHandler(new StreamHandler(
-            __DIR__ . '/../../../../var/log/app.log',
+            'php://stderr',
             $level
         ));
         
