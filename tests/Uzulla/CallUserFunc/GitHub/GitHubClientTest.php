@@ -242,4 +242,140 @@ class GitHubClientTest extends TestCase
         
         $this->assertNull($username);
     }
+    
+    /**
+     * 実際のGitHub APIを使用してユーザーが存在するかどうかをテストする
+     */
+    public function testRealUserExists(): void
+    {
+        // このテストはGitHub APIのレート制限に依存するため、スキップする場合がある
+        $this->checkGitHubRateLimit();
+        
+        // 実際のGitHubクライアントを作成
+        $githubClient = new GitHubClient();
+        
+        // 実際のGitHubクライアントを作成
+        $githubClient = new GitHubClient();
+        
+        // 既知の存在するユーザー「uzulla」をテスト
+        $exists = $githubClient->userExists('uzulla');
+        $this->assertTrue($exists, 'User "uzulla" should exist on GitHub');
+        
+        // ユーザー情報を取得
+        $userInfo = $githubClient->getUserInfo('uzulla');
+        $this->assertIsArray($userInfo);
+        $this->assertEquals('uzulla', $userInfo['login']);
+        $this->assertArrayHasKey('id', $userInfo);
+        $this->assertArrayHasKey('created_at', $userInfo);
+        
+        // 存在しないユーザーをテスト
+        $nonExistentUser = 'non-existent-user-' . uniqid();
+        $exists = $githubClient->userExists($nonExistentUser);
+        $this->assertFalse($exists, "User \"$nonExistentUser\" should not exist on GitHub");
+    }
+    
+    /**
+     * レート制限エラーの処理をテストする
+     */
+    public function testRateLimitExceeded(): void
+    {
+        // userExists()用のモックレスポンス
+        $mockHandler1 = new MockHandler([
+            new Response(403, [], '{"message":"API rate limit exceeded for 52.183.72.253. (But here\'s the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)","documentation_url":"https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting"}'),
+        ]);
+        
+        $handlerStack1 = HandlerStack::create($mockHandler1);
+        $mockClient1 = new Client(['handler' => $handlerStack1]);
+        
+        $client1 = new class($mockClient1) extends GitHubClient {
+            private Client $mockClient;
+            
+            public function __construct(Client $mockClient)
+            {
+                parent::__construct();
+                $this->mockClient = $mockClient;
+            }
+            
+            protected function getHttpClient(): Client
+            {
+                return $this->mockClient;
+            }
+        };
+        
+        // レート制限エラーの場合、userExists()はtrueを返す（ユーザーが存在すると仮定）
+        $exists = $client1->userExists('any-user');
+        $this->assertTrue($exists, 'When rate limited, userExists() should assume the user exists');
+        
+        // isNewUser()用の別のモックレスポンス
+        $mockHandler2 = new MockHandler([
+            new Response(403, [], '{"message":"API rate limit exceeded for 52.183.72.253. (But here\'s the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)","documentation_url":"https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting"}'),
+        ]);
+        
+        $handlerStack2 = HandlerStack::create($mockHandler2);
+        $mockClient2 = new Client(['handler' => $handlerStack2]);
+        
+        $client2 = new class($mockClient2) extends GitHubClient {
+            private Client $mockClient;
+            
+            public function __construct(Client $mockClient)
+            {
+                parent::__construct();
+                $this->mockClient = $mockClient;
+            }
+            
+            protected function getHttpClient(): Client
+            {
+                return $this->mockClient;
+            }
+        };
+        
+        // レート制限エラーの場合、isNewUser()はfalseを返す（ユーザーが新しくないと仮定）
+        $isNew = $client2->isNewUser('any-user');
+        $this->assertFalse($isNew, 'When rate limited, isNewUser() should assume the user is not new');
+    }
+    
+    /**
+     * GitHub APIのレート制限を確認し、不足している場合はテストをスキップする
+     */
+    private function checkGitHubRateLimit(): void
+    {
+        $client = new Client([
+            'base_uri' => 'https://api.github.com/',
+            'timeout' => 10.0,
+            'headers' => [
+                'User-Agent' => 'Packagist-to-BlueSky/1.0',
+            ],
+        ]);
+        
+        try {
+            $response = $client->get('rate_limit');
+            $responseBody = (string) $response->getBody();
+            $data = json_decode($responseBody, true);
+            
+            if (!is_array($data)) {
+                $this->markTestSkipped('Invalid response from GitHub API rate limit check.');
+            }
+            
+            if (!isset($data['resources']) || !is_array($data['resources'])) {
+                $this->markTestSkipped('Missing resources data in GitHub API response.');
+            }
+            
+            if (!isset($data['resources']['core']) || !is_array($data['resources']['core'])) {
+                $this->markTestSkipped('Missing core data in GitHub API response.');
+            }
+            
+            if (!isset($data['resources']['core']['remaining'])) {
+                $this->markTestSkipped('Missing remaining data in GitHub API response.');
+            }
+            
+            $remainingValue = $data['resources']['core']['remaining'];
+            $remaining = is_numeric($remainingValue) ? (int) $remainingValue : 0;
+            
+            if ($remaining <= 0) {
+                $this->markTestSkipped('GitHub API rate limit exceeded. Skipping test.');
+            }
+        } catch (\Exception $e) {
+            $this->markTestSkipped('Failed to check GitHub API rate limit: ' . $e->getMessage());
+        }
+    }
 }

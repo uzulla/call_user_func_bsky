@@ -37,6 +37,7 @@ class GitHubClient
      *
      * @param string $username GitHubユーザー名
      * @return array<string, mixed>|null ユーザー情報、存在しない場合はnull
+     * @throws \RuntimeException レート制限に達した場合
      */
     public function getUserInfo(string $username): ?array
     {
@@ -62,6 +63,13 @@ class GitHubClient
                 return null;
             }
             
+            // レート制限エラーの場合は特別に処理
+            if ($e->getCode() === 403 && strpos($e->getMessage(), 'rate limit exceeded') !== false) {
+                $this->logger?->warning('GitHub API rate limit exceeded', ['username' => $username]);
+                // レート制限エラーの場合はnullを返さず、例外をスローする
+                throw new \RuntimeException('GitHub API rate limit exceeded. Please try again later.');
+            }
+            
             $this->logger?->error('Failed to fetch GitHub user info', [
                 'username' => $username,
                 'error' => $e->getMessage(),
@@ -78,7 +86,16 @@ class GitHubClient
      */
     public function userExists(string $username): bool
     {
-        return $this->getUserInfo($username) !== null;
+        try {
+            return $this->getUserInfo($username) !== null;
+        } catch (\RuntimeException $e) {
+            // レート制限エラーの場合は、ユーザーが存在すると仮定する
+            if (strpos($e->getMessage(), 'rate limit exceeded') !== false) {
+                $this->logger?->warning('Assuming user exists due to rate limit', ['username' => $username]);
+                return true; // レート制限エラーの場合は、ユーザーが存在すると仮定する
+            }
+            throw $e; // その他のエラーは再スロー
+        }
     }
     
     /**
@@ -89,46 +106,55 @@ class GitHubClient
      */
     public function isNewUser(string $username): bool
     {
-        $userInfo = $this->getUserInfo($username);
-        
-        // ユーザーが存在しない場合は新しいとみなす
-        if ($userInfo === null) {
-            $this->logger?->info('GitHub user does not exist, considering as new', ['username' => $username]);
-            return true;
-        }
-        
-        // created_atが存在しない場合は新しいとみなす
-        if (!isset($userInfo['created_at'])) {
-            $this->logger?->warning('GitHub user info missing created_at', ['username' => $username]);
-            return true;
-        }
-        
-        if (!is_string($userInfo['created_at'])) {
-            $this->logger?->warning('GitHub user created_at is not a string', ['username' => $username]);
-            return true;
-        }
-        
         try {
-            $createdAt = new \DateTime($userInfo['created_at']);
-            $oneWeekAgo = new \DateTime('-1 week');
+            $userInfo = $this->getUserInfo($username);
             
-            $isNew = $createdAt > $oneWeekAgo;
+            // ユーザーが存在しない場合は新しいとみなす
+            if ($userInfo === null) {
+                $this->logger?->info('GitHub user does not exist, considering as new', ['username' => $username]);
+                return true;
+            }
             
-            $this->logger?->info('Checked if GitHub user is new', [
-                'username' => $username,
-                'created_at' => $createdAt->format('Y-m-d H:i:s'),
-                'one_week_ago' => $oneWeekAgo->format('Y-m-d H:i:s'),
-                'is_new' => $isNew,
-            ]);
+            // created_atが存在しない場合は新しいとみなす
+            if (!isset($userInfo['created_at'])) {
+                $this->logger?->warning('GitHub user info missing created_at', ['username' => $username]);
+                return true;
+            }
             
-            return $isNew;
-        } catch (\Exception $e) {
-            $this->logger?->error('Failed to parse GitHub user created_at', [
-                'username' => $username,
-                'created_at' => $userInfo['created_at'] ?? 'unknown',
-                'error' => $e->getMessage(),
-            ]);
-            return true; // エラーの場合は新しいとみなす
+            if (!is_string($userInfo['created_at'])) {
+                $this->logger?->warning('GitHub user created_at is not a string', ['username' => $username]);
+                return true;
+            }
+            
+            try {
+                $createdAt = new \DateTime($userInfo['created_at']);
+                $oneWeekAgo = new \DateTime('-1 week');
+                
+                $isNew = $createdAt > $oneWeekAgo;
+                
+                $this->logger?->info('Checked if GitHub user is new', [
+                    'username' => $username,
+                    'created_at' => $createdAt->format('Y-m-d H:i:s'),
+                    'one_week_ago' => $oneWeekAgo->format('Y-m-d H:i:s'),
+                    'is_new' => $isNew,
+                ]);
+                
+                return $isNew;
+            } catch (\Exception $e) {
+                $this->logger?->error('Failed to parse GitHub user created_at', [
+                    'username' => $username,
+                    'created_at' => $userInfo['created_at'] ?? 'unknown',
+                    'error' => $e->getMessage(),
+                ]);
+                return true; // エラーの場合は新しいとみなす
+            }
+        } catch (\RuntimeException $e) {
+            // レート制限エラーの場合は、ユーザーが新しくないと仮定する
+            if (strpos($e->getMessage(), 'rate limit exceeded') !== false) {
+                $this->logger?->warning('Assuming user is not new due to rate limit', ['username' => $username]);
+                return false; // レート制限エラーの場合は、ユーザーが新しくないと仮定する
+            }
+            throw $e; // その他のエラーは再スロー
         }
     }
     

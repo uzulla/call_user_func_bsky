@@ -188,6 +188,7 @@ class PackagistToBlueSkyApp
         
         $filteredPackages = [];
         $skippedCount = 0;
+        $rateLimitedCount = 0;
         
         foreach ($packages as $package) {
             // リポジトリURLがない場合はスキップしない
@@ -213,54 +214,86 @@ class PackagistToBlueSkyApp
                 continue;
             }
             
-            // ユーザーが存在するか確認
-            $userExists = $this->githubClient->userExists($username);
-            if (!$userExists) {
-                $this->logger?->info('Skipping package from non-existent GitHub user', [
-                    'package' => $package['title'] ?? 'unknown',
-                    'username' => $username,
-                ]);
-                $output->writeln(sprintf(
-                    '<comment>スパムの可能性があるためスキップします: %s (GitHubユーザー: %s) - ユーザーが存在しません</comment>',
-                    $package['title'] ?? 'unknown',
-                    (string)$username
-                ));
-                $skippedCount++;
-                continue;
-            }
-            
-            // ユーザーが新しいか確認
-            $isNewUser = $this->githubClient->isNewUser($username);
-            if ($isNewUser) {
-                // ユーザーの登録日時を取得
-                $createdAt = $this->githubClient->getUserCreatedAt($username);
-                $createdAtStr = $createdAt ? $createdAt->format('Y-m-d H:i:s') : '不明';
-                $oneWeekAgo = new \DateTime('-1 week');
+            try {
+                // ユーザーが存在するか確認
+                $userExists = $this->githubClient->userExists($username);
+                if (!$userExists) {
+                    $this->logger?->info('Skipping package from non-existent GitHub user', [
+                        'package' => $package['title'] ?? 'unknown',
+                        'username' => $username,
+                    ]);
+                    $output->writeln(sprintf(
+                        '<comment>スパムの可能性があるためスキップします: %s (GitHubユーザー: %s) - ユーザーが存在しません</comment>',
+                        $package['title'] ?? 'unknown',
+                        (string)$username
+                    ));
+                    $skippedCount++;
+                    continue;
+                }
                 
-                $this->logger?->info('Skipping package from new GitHub user', [
-                    'package' => $package['title'] ?? 'unknown',
-                    'username' => $username,
-                    'created_at' => $createdAtStr,
-                    'one_week_ago' => $oneWeekAgo->format('Y-m-d H:i:s'),
-                ]);
+                // ユーザーが新しいか確認
+                $isNewUser = $this->githubClient->isNewUser($username);
+                if ($isNewUser) {
+                    // ユーザーの登録日時を取得
+                    $createdAt = $this->githubClient->getUserCreatedAt($username);
+                    $createdAtStr = $createdAt ? $createdAt->format('Y-m-d H:i:s') : '不明';
+                    $oneWeekAgo = new \DateTime('-1 week');
+                    
+                    $this->logger?->info('Skipping package from new GitHub user', [
+                        'package' => $package['title'] ?? 'unknown',
+                        'username' => $username,
+                        'created_at' => $createdAtStr,
+                        'one_week_ago' => $oneWeekAgo->format('Y-m-d H:i:s'),
+                    ]);
+                    
+                    $output->writeln(sprintf(
+                        '<comment>スパムの可能性があるためスキップします: %s (GitHubユーザー: %s) - ユーザー登録日: %s (1週間以内)</comment>',
+                        $package['title'] ?? 'unknown',
+                        (string)$username,
+                        $createdAtStr
+                    ));
+                    $skippedCount++;
+                    continue;
+                }
                 
-                $output->writeln(sprintf(
-                    '<comment>スパムの可能性があるためスキップします: %s (GitHubユーザー: %s) - ユーザー登録日: %s (1週間以内)</comment>',
-                    $package['title'] ?? 'unknown',
-                    (string)$username,
-                    $createdAtStr
-                ));
-                $skippedCount++;
-                continue;
+                $filteredPackages[] = $package;
+            } catch (\RuntimeException $e) {
+                // レート制限エラーの場合は、パッケージをスキップせずに含める
+                if (strpos($e->getMessage(), 'rate limit exceeded') !== false) {
+                    $this->logger?->warning('Including package despite rate limit', [
+                        'package' => $package['title'] ?? 'unknown',
+                        'username' => $username,
+                    ]);
+                    $output->writeln(sprintf(
+                        '<comment>GitHub APIのレート制限により検証できませんが、パッケージを含めます: %s (GitHubユーザー: %s)</comment>',
+                        $package['title'] ?? 'unknown',
+                        (string)$username
+                    ));
+                    $filteredPackages[] = $package;
+                    $rateLimitedCount++;
+                } else {
+                    // その他のエラーの場合はスキップ
+                    $this->logger?->error('Skipping package due to error', [
+                        'package' => $package['title'] ?? 'unknown',
+                        'username' => $username,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $output->writeln(sprintf(
+                        '<comment>エラーのためスキップします: %s (GitHubユーザー: %s) - %s</comment>',
+                        $package['title'] ?? 'unknown',
+                        (string)$username,
+                        $e->getMessage()
+                    ));
+                    $skippedCount++;
+                }
             }
-            
-            $filteredPackages[] = $package;
         }
         
         $output->writeln(sprintf(
-            '<info>スパムフィルタリング結果: %d件中%d件をスキップしました</info>',
+            '<info>スパムフィルタリング結果: %d件中%d件をスキップしました（レート制限により%d件を検証せずに含めました）</info>',
             count($packages),
-            $skippedCount
+            $skippedCount,
+            $rateLimitedCount
         ));
         
         return $filteredPackages;
