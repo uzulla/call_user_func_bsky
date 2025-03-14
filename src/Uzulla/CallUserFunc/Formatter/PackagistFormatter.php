@@ -64,11 +64,13 @@ class PackagistFormatter
         $packageInfo = $this->extractPackageInfo($title);
         
         // 整形されたテキストを作成
-        $text = "📦 {$packageInfo['name']} {$packageInfo['version']}\n\n";
+        $text = "📦 {$packageInfo['name']} {$packageInfo['version']}";
         
         if (!empty($description)) {
-            $text .= "{$description}\n\n";
+            $text .= "\n\n{$description}";
         }
+        
+        $text .= "\n\n";
         
         // リポジトリURLがある場合はそれを表示
         if (isset($package['repository_url']) && is_string($package['repository_url'])) {
