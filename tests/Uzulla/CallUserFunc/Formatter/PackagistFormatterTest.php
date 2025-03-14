@@ -96,6 +96,33 @@ class PackagistFormatterTest extends TestCase
         $this->assertStringContainsString('📦 example/package2 2.0.0', $formatted[1]['text']);
     }
     
+    public function testFormatPackageWithEmptyDescription(): void
+    {
+        $formatter = new PackagistFormatter();
+        
+        $package = [
+            'title' => 'example/package (1.0.0)',
+            'link' => 'https://packagist.org/packages/example/package',
+            'description' => '', // Empty description
+        ];
+        
+        $formatted = $formatter->formatPackage($package);
+        
+        // Check that the package name and version are included
+        $this->assertStringContainsString('📦 example/package 1.0.0', $formatted);
+        
+        // Check that the link is included
+        $this->assertStringContainsString('🔗 https://packagist.org/packages/example/package', $formatted);
+        
+        // Check that there's no double newline (empty line) between title and link
+        $this->assertStringNotContainsString("1.0.0\n\n\n", $formatted);
+        
+        // The expected format should be: title, double newline, then link
+        $expectedPattern = "/📦 example\/package 1\.0\.0\n\n🔗/";
+        $this->assertMatchesRegularExpression($expectedPattern, $formatted);
+    }
+    
+
     public function testFormatPackagesWithLimit(): void
     {
         $formatter = new PackagistFormatter();
